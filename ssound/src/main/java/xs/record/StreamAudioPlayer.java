@@ -22,11 +22,12 @@
  * SOFTWARE.
  */
 
-package com.xs;
+package xs.record;
 
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.support.annotation.WorkerThread;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -47,6 +48,11 @@ public final class StreamAudioPlayer {
 
     private ExecutorService mPlayExecutorService;
 
+    public interface AudioPlayCompeletedCallback {
+        @WorkerThread
+        void onAudioPlayCompeleted();
+    }
+
     private StreamAudioPlayer() {
         // singleton
         mPlayExecutorService = Executors.newSingleThreadExecutor();
@@ -61,16 +67,21 @@ public final class StreamAudioPlayer {
     }
 
 
-    public boolean play(String path) {
+    public boolean play(String path, AudioPlayCompeletedCallback playCompeletedCallback) {
 
         if (path == null || TextUtils.isEmpty(path)) {
             Log.w(TAG, "can't set empty play_path");
             return false;
         }
 
+        if (playCompeletedCallback == null) {
+            Log.w(TAG, "can't set empty play_compelete_callback");
+            return false;
+        }
+
         File file = new File(path);
         if (file.exists()) {
-            mPlayExecutorService.execute(new AudioTrackRunnable(path));
+            mPlayExecutorService.execute(new AudioTrackRunnable(path, playCompeletedCallback));
             return true;
         }
         return false;
@@ -84,11 +95,15 @@ public final class StreamAudioPlayer {
         private String mPlayPath;
         private byte[] buffer = null;
 
-        AudioTrackRunnable(String path) {
+        private AudioPlayCompeletedCallback mAudioPlayCompeletedCallback;
+
+        AudioTrackRunnable(String path, AudioPlayCompeletedCallback playCompeletedCallback) {
             if (mAudioTrack != null) {
                 mAudioTrack.release();
                 mAudioTrack = null;
             }
+
+            mAudioPlayCompeletedCallback = playCompeletedCallback;
 
             mPlayPath = path;
             minBufferSize = AudioTrack.getMinBufferSize(DEFAULT_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -141,6 +156,12 @@ public final class StreamAudioPlayer {
                     if (file != null) {
                         file.close();
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                try {
+                    mAudioPlayCompeletedCallback.onAudioPlayCompeleted();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

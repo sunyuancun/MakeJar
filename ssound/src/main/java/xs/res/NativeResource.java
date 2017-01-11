@@ -1,17 +1,17 @@
-package com.tt;
+package xs.res;
 
-class NativeResource {
+public class NativeResource {
 
-    static String vadResourceName = "vad.0.1.bin";
-    static String zipResourceName = "resource.zip";
+    public static String vadResourceName = "vad.0.1.bin";
+    public static String zipResourceName = "resource.zip";
 
 
-    static String native_zip_res_path = "{"
+    public static String native_zip_res_path = "{"
             + "\"en.sent.score\":{\"res\": \"%s/eval/bin/eng.snt.pydnn.16bit\"}"
             + ",\"en.word.score\":{\"res\": \"%s/eval/bin/eng.wrd.pydnn.16bit\"}"
             + "}";
 
-    static String[] native_zip_file_names = {
+    public static String[] native_zip_file_names = {
             "/eval/db/comb.db",
             "/eval/db/common.bin",
             "/eval/bin/eng.snt.pydnn.16bit/eng.snt.pydnn.16bit.bin",

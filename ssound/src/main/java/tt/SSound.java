@@ -1,4 +1,4 @@
-package com.tt;
+package tt;
 
 public final class SSound {
 

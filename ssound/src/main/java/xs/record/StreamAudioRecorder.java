@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package com.xs;
+package xs.record;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;

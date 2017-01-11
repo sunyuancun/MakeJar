@@ -1,18 +1,24 @@
-package com.tt;
+package xs;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.xs.StreamAudioPlayer;
-import com.xs.StreamAudioRecorder;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import tt.SSound;
+import xs.record.StreamAudioPlayer;
+import xs.record.StreamAudioRecorder;
+import xs.res.NativeResource;
+import xs.utils.AiUtil;
+import xs.utils.NetWorkUtil;
 
 /**
  * Created by wang on 2016/11/29.
@@ -72,6 +78,11 @@ public class SingEngine {
          * 引擎初始化成功
          */
         void onReady();
+
+        /**
+         * 录音播放完成监听
+         */
+        void onPlayCompeleted();
     }
 
     /**
@@ -137,11 +148,15 @@ public class SingEngine {
     private long logEnable = 1;  //开启log   0为关闭;1为开启
     private long defaultServerTimeout = 60; //引擎超时时间  单位秒
 
+    private String mAudioType = "wav";
+    private long mSampleRate = 16000;
+
+
     // 用来规避 vadTimeOut多次回调 和 60011 Interface calls in the wrong order
     private boolean mNeedFeedData = true;
 
     // 用于离线结果上传
-    private String mUid, mAppkey, mResultTag;
+    private String mResultTag;
 
     private SingEngine(Context context) {
         ct = context.getApplicationContext();
@@ -250,7 +265,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.3.4";
+        return "1.3.8";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -263,7 +278,6 @@ public class SingEngine {
         if (appKey == null || secretKey == null) {
             caller.onEnd(60000, "please check your appKey,secretKey");
         }
-        mAppkey = appKey;
         JSONObject cfg = new JSONObject();
         cfg.put("appKey", appKey).put("secretKey", secretKey).put("logEnable", logEnable);
         return cfg;
@@ -293,6 +307,7 @@ public class SingEngine {
         mStreamAudioRecorder = StreamAudioRecorder.getInstance();
         mStreamAudioPlayer = StreamAudioPlayer.getInstance();
         caller.onReady();
+
     }
 
     /**
@@ -303,17 +318,18 @@ public class SingEngine {
         if (UserId == null) {
             UserId = "guest";
         }
-        mUid = UserId;
+
         JSONObject cfg = new JSONObject();
         JSONObject audio = new JSONObject();
         String UID = "{\"userId\":" + "\"" + UserId.trim() + "\"}";
 
-        audio.put("audioType", "wav")
-                .put("sampleRate", 16000)
+        audio.put("audioType", mAudioType)
+                .put("sampleRate", mSampleRate)
                 .put("sampleBytes", 2)
                 .put("channel", 1);
 
         cfg.put("coreProvideType", cpt.getValue())
+                .put("soundIntensityEnable", 1)
                 .put("app", new JSONObject(UID))
                 .put("audio", audio)
                 .put("request", request);
@@ -363,13 +379,6 @@ public class SingEngine {
                     if (!mNeedFeedData) return;
 
                     if (size > 0) {
-                        int v = 0;
-                        for (byte element : data) {
-                            v += element * element;
-                        }
-                        double mean = v / (double) size;
-                        double volume = 100 * Math.log10(mean);
-                        caller.onUpdateVolume((int) volume);
                         caller.onRecordingBuffer(data);
                         int rr = SSound.ssound_feed(engine, data, size);
                         if (rr != 0) {
@@ -405,6 +414,7 @@ public class SingEngine {
         if (r != 0) {
             caller.onEnd(70005, "StreamAudioRecorder stop error");
         }
+
         r = SSound.ssound_stop(engine);
         if (r != 0) {
             caller.onEnd(70002, "engine stop error");
@@ -425,7 +435,6 @@ public class SingEngine {
 
         r = SSound.ssound_cancel(engine);
 
-        log(r + "");
         if (r != 0) {
             caller.onEnd(70003, "cancel error");
         }
@@ -445,7 +454,12 @@ public class SingEngine {
      * 根据文件path回放录音
      */
     public void playback(String recordPath) {
-        mStreamAudioPlayer.play(recordPath);
+        mStreamAudioPlayer.play(recordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
+            @Override
+            public void onAudioPlayCompeleted() {
+                caller.onPlayCompeleted();
+            }
+        });
     }
 
     /**
@@ -453,7 +467,12 @@ public class SingEngine {
      */
     public void playback() {
         if (mLastRecordPath != null && (mLastRecordPath.contains(".pcm") || mLastRecordPath.contains(".wav"))) {
-            mStreamAudioPlayer.play(mLastRecordPath);
+            mStreamAudioPlayer.play(mLastRecordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
+                @Override
+                public void onAudioPlayCompeleted() {
+                    caller.onPlayCompeleted();
+                }
+            });
         }
     }
 
@@ -470,20 +489,25 @@ public class SingEngine {
 
                         final String result = new String(data, 0, size).trim();
 
+                        if (result.isEmpty()) {
+                            SSound.ssound_log(engine, " empty result：" + result);
+                        }
+
+
                         try {
                             final JSONObject json = new JSONObject(result);
-
                             if (json.has("errId")) {
                                 //返回error message
                                 caller.onEnd(json.getInt("errId"), json.getString("error"));
-
                                 if (mNeedFeedData && mStreamAudioRecorder.mIsRecording.get()) {
                                     stop();
                                 }
                             } else if (json.has("vad_status") || json.has("sound_intensity")) {
                                 if (mNeedFeedData) {
                                     int vadCode = json.optInt("vad_status");
-                                    log("VadCode:" + vadCode);
+                                    int volume = json.optInt("sound_intensity");
+                                    caller.onUpdateVolume(volume);
+
                                     if (vadCode == 2 && mStreamAudioRecorder.mIsRecording.get()) {
                                         stop(); //自动stop
                                         caller.onBackVadTimeOut();    //后vad时间超时
@@ -491,6 +515,7 @@ public class SingEngine {
 
                                     if (vadCode == 3 && mStreamAudioRecorder.mIsRecording.get()) {
                                         caller.onFrontVadTimeOut();    //前vad时间超时
+
                                     }
                                 }
                             } else {
@@ -500,7 +525,7 @@ public class SingEngine {
 
                                 if (mResultTag != null && mResultTag.equals(coreProvideType.NATIVE.getValue())) {
                                     //UPLOAD NATIVE RESULT
-                                    LogUtil.getInstance().resultLogUploadToLogServer(mAppkey, mUid, json.toString());
+                                    SSound.ssound_log(engine, json.toString());
                                 }
 
                             }
@@ -508,6 +533,7 @@ public class SingEngine {
 
                         } catch (JSONException e) {
                             caller.onEnd(70001, "server result string error");
+                            SSound.ssound_log(engine, "Error resault can't covert to json: " + result.toString());
                             e.printStackTrace();
                         }
                     }
@@ -632,7 +658,6 @@ public class SingEngine {
                 return;
             }
 
-
             if (!NetWorkUtil.getInstance().isConnected(ct)) {
                 startCfg.put("coreProvideType", coreProvideType.NATIVE.getValue());
                 mResultTag = coreProvideType.NATIVE.getValue();
@@ -684,33 +709,63 @@ public class SingEngine {
 //
 //    }
 
-//    /**
-//     * 离线WAV 文件评测
-//     */
-//    public void startWithPCM(String wavName) {
-//        byte[] rid = new byte[64];
-//        if (SSoundStart(rid) != 0) return;
-//        int bytes, rv;
-//        byte[] buf = new byte[1024];
-//
-//        InputStream fis;
-//        try {
-//            fis = new FileInputStream(wavName);
-//            while ((bytes = fis.read(buf, 0, 1024)) > 0) {
-//                if ((rv = SSound.ssound_feed(engine, buf, bytes)) != 0) {
-//                    break;
-//                }
-//            }
-//
-//            fis.close();
-//        } catch (IOException e) {
-//            caller.onEnd(70011, "feed audio data fail");
-//        } finally {
-//        }
-//
-//        stop();
-//
-//    }
+    /**
+     * 离线WAV 文件评测
+     */
+    public void startWithPCM(String filePath) {
+        try {
+            if (selectAudioTypeConfig(filePath)) return;
+
+            byte[] rid = new byte[64];
+            if (SSoundStart(rid) != 0) return;
+            int bytes, rv;
+            byte[] buf = new byte[1024];
+
+            InputStream fis;
+            try {
+                fis = new FileInputStream(filePath);
+                while ((bytes = fis.read(buf, 0, 1024)) > 0) {
+                    if ((rv = SSound.ssound_feed(engine, buf, bytes)) != 0) {
+                        break;
+                    }
+                }
+
+                fis.close();
+            } catch (IOException e) {
+                caller.onEnd(70011, "feed audio data fail");
+            } finally {
+            }
+
+            stop();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private boolean selectAudioTypeConfig(String filePath) throws JSONException {
+        if (TextUtils.isEmpty(filePath)) return true;
+
+
+        if (filePath.endsWith("WAV") || filePath.endsWith("wav")) {
+            mAudioType = "wav";
+            mSampleRate = 16000;
+        }
+
+        if (filePath.endsWith("MP3") || filePath.endsWith("mp3")) {
+            mAudioType = "mp3";
+            mSampleRate = 44100;
+        }
+
+        JSONObject audio = new JSONObject();
+        audio.put("audioType", mAudioType)
+                .put("sampleRate", mSampleRate)
+                .put("sampleBytes", 2)
+                .put("channel", 1);
+        startCfg.put("audio", audio);
+        return false;
+    }
 
 
 //    /**
@@ -722,14 +777,14 @@ public class SingEngine {
 //
 //        InputStream fis;
 //        try {
-//            fis = ct.getAssets().open(MP3Name);
+//            fis = new FileInputStream(MP3Name);
 //            int length = fis.available();
 //            byte[] buf_mp3 = new byte[length];
 //            fis.read(buf_mp3, 0, length);
 //            SSound.ssound_offline(engine, buf_mp3, length);
 //            fis.close();
 //        } catch (IOException e) {
-//            caller.onEnd(70011, "feed audio data fail");
+//            caller.onEnd(70011, "offine mp3 audio data fail");
 //        } finally {
 //        }
 //
@@ -740,6 +795,5 @@ public class SingEngine {
     private void log(String s) {
         Log.d("SingEngine", s);
     }
-
 
 }

@@ -1,4 +1,4 @@
-package com.tt;
+package xs.utils;
 
 import android.content.Context;
 import android.net.ConnectivityManager;

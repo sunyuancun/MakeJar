@@ -45,5 +45,5 @@ task makeJar(type: Copy) {
 //（我们只关心classes.jar这个文件）
 include('classes.jar')
 //重命名
-rename ('classes.jar', 'ssound1.3.4.jar')
+rename ('classes.jar', 'ssound.jar')
 }

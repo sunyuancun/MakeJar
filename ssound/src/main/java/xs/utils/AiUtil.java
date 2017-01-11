@@ -1,8 +1,9 @@
-package com.tt;
+package xs.utils;
 
 
 import android.content.Context;
 import android.util.Log;
+
 
 import org.apache.http.util.EncodingUtils;
 
@@ -18,6 +19,8 @@ import java.io.OutputStream;
 import java.security.MessageDigest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import xs.res.NativeResource;
 
 public class AiUtil {
     private static String TAG = "AiUtil";
