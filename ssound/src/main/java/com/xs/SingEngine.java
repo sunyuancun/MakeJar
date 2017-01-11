@@ -1,10 +1,16 @@
-package xs;
+package com.xs;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.tt.SSound;
+import com.xs.record.StreamAudioPlayer;
+import com.xs.record.StreamAudioRecorder;
+import com.xs.res.NativeResource;
+import com.xs.utils.AiUtil;
+import com.xs.utils.NetWorkUtil;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -13,12 +19,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import tt.SSound;
-import xs.record.StreamAudioPlayer;
-import xs.record.StreamAudioRecorder;
-import xs.res.NativeResource;
-import xs.utils.AiUtil;
-import xs.utils.NetWorkUtil;
 
 /**
  * Created by wang on 2016/11/29.

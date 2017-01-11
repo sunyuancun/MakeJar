@@ -1,4 +1,4 @@
-package xs.res;
+package com.xs.res;
 
 public class NativeResource {
 
