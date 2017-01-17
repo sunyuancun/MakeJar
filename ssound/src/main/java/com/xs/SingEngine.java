@@ -19,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-
 /**
  * Created by wang on 2016/11/29.
  */
@@ -74,6 +73,12 @@ public class SingEngine {
          */
         void onRecordingBuffer(byte[] data);
 
+
+        /**
+         * 录音长度过长，监听录音长度超时
+         */
+        void onRecordLengthOut();
+
         /**
          * 引擎初始化成功
          */
@@ -83,6 +88,7 @@ public class SingEngine {
          * 录音播放完成监听
          */
         void onPlayCompeleted();
+
     }
 
     /**
@@ -157,6 +163,9 @@ public class SingEngine {
 
     // 用于离线结果上传
     private String mResultTag;
+
+    //用于美联录音超时自动stop处理
+    private long mStartRecordTimeStamp, mStopRecordTimeStamp;
 
     private SingEngine(Context context) {
         ct = context.getApplicationContext();
@@ -265,7 +274,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.3.8";
+        return "1.3.9";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -369,6 +378,7 @@ public class SingEngine {
             r = mStreamAudioRecorder.start(recordPath, new StreamAudioRecorder.AudioStartCompeletedCallback() {
                 @Override
                 public void onAudioStartCompeleted() {
+                    mStartRecordTimeStamp = System.currentTimeMillis();
                     byte[] rid = new byte[64];
                     SingEngine.this.SSoundStart(rid);
                 }
@@ -377,13 +387,39 @@ public class SingEngine {
                 public void onAudioData(byte[] data, int size) {
                     // 处理cancel 或 stop 后多feed一次，导致60011
                     if (!mNeedFeedData) return;
+                    if (size <= 0) return;
 
-                    if (size > 0) {
-                        caller.onRecordingBuffer(data);
-                        int rr = SSound.ssound_feed(engine, data, size);
-                        if (rr != 0) {
-                            stop();
+                    if (mResultTag != null && mResultTag.equals(coreProvideType.CLOUD.getValue())) {
+                        String coreTypeString = startCfg.optJSONObject("request").optString("coreType");
+                        mStopRecordTimeStamp = System.currentTimeMillis();
+                        long recordTime = mStopRecordTimeStamp - mStartRecordTimeStamp;
+                        //word
+                        if (coreTypeString != null && (coreTypeString.equals(coreType.enWord.getValue()))) {
+
+                            if (recordTime >= 18000) {
+                                log("record timeout : word");
+                                caller.onRecordLengthOut();
+                            }
+
+                            SsoundFeed(data, size);
+
                         }
+                        //sent
+                        else if (coreTypeString != null && (coreTypeString.equals(coreType.enSent.getValue()))) {
+
+                            if (recordTime >= 38000) {
+                                log("record timeout : sent");
+                                caller.onRecordLengthOut();
+                            }
+
+                            SsoundFeed(data, size);
+
+                        } else {
+                            SsoundFeed(data, size);
+                        }
+
+                    } else {
+                        SsoundFeed(data, size);
                     }
                 }
 
@@ -420,7 +456,6 @@ public class SingEngine {
             caller.onEnd(70002, "engine stop error");
         }
         mNeedFeedData = false;
-
     }
 
     /**
@@ -473,6 +508,18 @@ public class SingEngine {
                     caller.onPlayCompeleted();
                 }
             });
+        }
+    }
+
+    /**
+     * 调用ssound_feed，并更新测评音频数据
+     */
+    private void SsoundFeed(byte[] data, int size) {
+        if (!mNeedFeedData) return;
+        caller.onRecordingBuffer(data);
+        int rr = SSound.ssound_feed(engine, data, size);
+        if (rr != 0) {
+            stop();
         }
     }
 
@@ -606,8 +653,8 @@ public class SingEngine {
             JSONObject vad = new JSONObject();
             vad.put("enable", 1);
             vad.put("res", buildAvdPath());
-            vad.put("maxBeginSil", frontVadTime / 20);
-            vad.put("rightMargin", backVadTime / 20);
+            vad.put("maxBeginSil", frontVadTime / 30);
+            vad.put("rightMargin", backVadTime / 200);
             newCfg.put("vad", vad);
         }
     }
