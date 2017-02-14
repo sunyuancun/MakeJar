@@ -628,6 +628,7 @@ public class SingEngine {
     private void addCloudInitJson() throws JSONException {
         JSONObject cloud = new JSONObject();
         String serverAPI = "ws://api.cloud.ssapi.cn:8080";
+        String testAPI = "ws://139.196.138.232:8090";
         cloud.put("enable", 1)
                 .put("server", serverAPI)
                 .put("connectTimeout", 20)
