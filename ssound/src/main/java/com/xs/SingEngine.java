@@ -5,12 +5,12 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.tt.SSound;
-import com.xs.record.StreamAudioPlayer;
-import com.xs.record.StreamAudioRecorder;
 import com.xs.res.NativeResource;
 import com.xs.utils.AiUtil;
 import com.xs.utils.NetWorkUtil;
+import com.tt.SSound;
+import com.xs.record.StreamAudioPlayer;
+import com.xs.record.StreamAudioRecorder;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -274,7 +274,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.3.9";
+        return "1.4.0";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -509,6 +509,10 @@ public class SingEngine {
                 }
             });
         }
+    }
+
+    public void stopPlayBack() {
+        mStreamAudioPlayer.stopPlay();
     }
 
     /**

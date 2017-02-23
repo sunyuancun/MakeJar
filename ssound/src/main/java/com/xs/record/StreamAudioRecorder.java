@@ -235,7 +235,7 @@ public final class StreamAudioRecorder {
             mExecutorService.execute(new AudioRecordRunnable(AudioFormat.ENCODING_PCM_16BIT, audioStartCompeletedCallback, audioDataCallback, path));
             return 0;
         }
-        return 1;
+        return 2;
     }
 
     public int stop() {

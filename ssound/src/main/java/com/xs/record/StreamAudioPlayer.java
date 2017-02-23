@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by Piasy{github.com/Piasy} on 16/2/24.
@@ -46,6 +47,13 @@ public final class StreamAudioPlayer {
     private static final int DEFAULT_SAMPLE_RATE = 16000;
     private static final int DEFAULT_BUFFER_SIZE = 2048;
 
+    private PLAY_STATUS mPlay_Status;
+
+    public enum PLAY_STATUS {
+        INIT, START, STOP
+    }
+
+    public AtomicBoolean mIsPlaying;
     private ExecutorService mPlayExecutorService;
 
     public interface AudioPlayCompeletedCallback {
@@ -55,6 +63,8 @@ public final class StreamAudioPlayer {
 
     private StreamAudioPlayer() {
         // singleton
+        mPlay_Status = PLAY_STATUS.INIT;
+        mIsPlaying = new AtomicBoolean(false);
         mPlayExecutorService = Executors.newSingleThreadExecutor();
     }
 
@@ -67,26 +77,36 @@ public final class StreamAudioPlayer {
     }
 
 
-    public boolean play(String path, AudioPlayCompeletedCallback playCompeletedCallback) {
+    public int play(String path, AudioPlayCompeletedCallback playCompeletedCallback) {
+        mPlay_Status = PLAY_STATUS.START;
 
         if (path == null || TextUtils.isEmpty(path)) {
             Log.w(TAG, "can't set empty play_path");
-            return false;
+            return 3;
         }
 
         if (playCompeletedCallback == null) {
             Log.w(TAG, "can't set empty play_compelete_callback");
-            return false;
+            return 2;
         }
 
         File file = new File(path);
         if (file.exists()) {
-            mPlayExecutorService.execute(new AudioTrackRunnable(path, playCompeletedCallback));
-            return true;
+            if (mIsPlaying.compareAndSet(false, true)) {
+                mPlayExecutorService.execute(new AudioTrackRunnable(path, playCompeletedCallback));
+                return 0;
+            }
+            return 1;
         }
-        return false;
+
+        return 4;
     }
 
+    public int stopPlay() {
+        mPlay_Status = PLAY_STATUS.STOP;
+        mIsPlaying.compareAndSet(true, false);
+        return 0;
+    }
 
     private class AudioTrackRunnable implements Runnable {
         private AudioTrack mAudioTrack;
@@ -130,7 +150,7 @@ public final class StreamAudioPlayer {
                 }
 
                 try {
-                    while (true) {
+                    while (mIsPlaying.get()) {
                         int size = file.read(buffer, 0, buffer.length);
                         if (size == -1) {
                             break;
@@ -161,7 +181,10 @@ public final class StreamAudioPlayer {
                 }
 
                 try {
-                    mAudioPlayCompeletedCallback.onAudioPlayCompeleted();
+
+                    if (mPlay_Status.equals(PLAY_STATUS.START)) {
+                        mAudioPlayCompeletedCallback.onAudioPlayCompeleted();
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
