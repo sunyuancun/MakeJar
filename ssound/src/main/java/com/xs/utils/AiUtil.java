@@ -4,6 +4,7 @@ package com.xs.utils;
 import android.content.Context;
 import android.util.Log;
 
+
 import com.xs.res.NativeResource;
 
 import org.apache.http.util.EncodingUtils;
@@ -269,16 +270,33 @@ public class AiUtil {
     }
 
     public static String getFilePathFromAssets(Context context, String name) {
+        File targetFile = null;
         try {
-            File targetFile = new File(getFilesDir(context), name);
-            if (!isFileExists(targetFile)) {
+            targetFile = new File(getFilesDir(context), name);
+            InputStream inputStream = context.getAssets().open(name);
+            int available = inputStream.available();
+
+            if (targetFile.exists()) {
+                //完整性检查
+                if (targetFile.length() == available) {
+
+                } else {
+                    if (targetFile.isFile()) {
+                        targetFile.delete();
+                    }
+                    copyInputStreamToFile(context.getAssets().open(name), targetFile);
+                }
+            } else {
+                //文件缺失
                 copyInputStreamToFile(context.getAssets().open(name), targetFile);
             }
             return targetFile.getAbsolutePath();
         } catch (Exception e) {
+            if (targetFile != null && targetFile.exists() && targetFile.isFile()) {
+                targetFile.delete();
+            }
             Log.e(TAG, "failed to open vadbin resource from assets， please check your assets.", e);
         }
-
         return null;
     }
 
@@ -294,11 +312,6 @@ public class AiUtil {
 
         is.close();
         fos.close();
-    }
-
-    private static boolean isFileExists(File file) {
-        return file.exists() && file.length() > 0;
-
     }
 
     private static boolean checkResourceIsExist(File targetDir) {
