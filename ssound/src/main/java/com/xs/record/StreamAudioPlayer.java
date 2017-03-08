@@ -181,10 +181,10 @@ public final class StreamAudioPlayer {
                 }
 
                 try {
-
                     if (mPlay_Status.equals(PLAY_STATUS.START)) {
                         mAudioPlayCompeletedCallback.onAudioPlayCompeleted();
                     }
+                    stopPlay();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
