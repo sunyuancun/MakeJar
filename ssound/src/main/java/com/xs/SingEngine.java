@@ -274,7 +274,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.4.1";
+        return "1.4.2";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -331,6 +331,11 @@ public class SingEngine {
         JSONObject cfg = new JSONObject();
         JSONObject audio = new JSONObject();
         String UID = "{\"userId\":" + "\"" + UserId.trim() + "\"}";
+
+        if (request != null) {
+            //设置开启返回 audioUrl
+            request.put("attachAudioUrl", 1);
+        }
 
         audio.put("audioType", mAudioType)
                 .put("sampleRate", mSampleRate)
