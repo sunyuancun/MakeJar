@@ -12,6 +12,7 @@ public class NativeResource {
             + "}";
 
     public static String[] native_zip_file_names = {
+            "/eval/db/GIZA.db",
             "/eval/db/comb.db",
             "/eval/db/common.bin",
             "/eval/bin/eng.snt.pydnn.16bit/eng.snt.pydnn.16bit.bin",
