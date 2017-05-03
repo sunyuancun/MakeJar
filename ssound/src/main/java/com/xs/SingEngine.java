@@ -179,6 +179,7 @@ public class SingEngine {
         singEngine.setWavPath(AiUtil.getFilesDir(
                 context.getApplicationContext()).getPath()
                 + "/record/");
+        AiUtil.createFile(AiUtil.getFilesDir(context.getApplicationContext()).getPath() + "/crash.txt");
         return singEngine;
     }
 
@@ -274,7 +275,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.4.2";
+        return "1.5.0";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -287,8 +288,14 @@ public class SingEngine {
         if (appKey == null || secretKey == null) {
             caller.onEnd(60000, "please check your appKey,secretKey");
         }
+
+        String outputPath = AiUtil.getFilesDir(ct.getApplicationContext()).getPath() + "/crash.txt";
+        JSONObject prof = new JSONObject();
+        prof.put("enable", 1);
+        prof.put("output", outputPath);
+
         JSONObject cfg = new JSONObject();
-        cfg.put("appKey", appKey).put("secretKey", secretKey).put("logEnable", logEnable);
+        cfg.put("appKey", appKey).put("secretKey", secretKey).put("logEnable", logEnable).put("prof", prof);
         return cfg;
     }
 
