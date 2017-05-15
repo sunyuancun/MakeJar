@@ -514,7 +514,6 @@ public class SingEngine {
                     wavPath += "/";
                 }
                 String recordPath = wavPath + tokenId + ".wav";
-                log(recordPath);
                 mStreamAudioPlayer.play(recordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
                     @Override
                     public void onAudioPlayCompeleted() {
