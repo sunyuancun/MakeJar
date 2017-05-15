@@ -20,6 +20,7 @@ import android.widget.Toast;
 import com.xs.SingEngine;
 import com.xs.utils.AiUtil;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class PlayActivity extends AppCompatActivity implements View.OnClickListener {
@@ -34,6 +35,8 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     SingEngine engine;
 
     ProgressDialog mProgressDialog;
+
+    String mCurrentTokenId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,6 +131,11 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         bt.setText("停止录音");
         String retext = edit.getText().toString().trim();
 
+
+        engine.setWavPath(AiUtil.getFilesDir(
+                this).getPath()
+                + "/record2");
+
         if (engine != null) {
             try {
                 JSONObject request = new JSONObject();
@@ -144,10 +152,10 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                 JSONObject startCfg = engine.buildStartJson("guest", request);
                 //设置评测请求参数
                 engine.setStartCfg(startCfg);
-                //path
-                engine.setWavPath(AiUtil.getFilesDir(
-                        this.getApplicationContext()).getPath()
-                        + "/record/haha.wav");
+//                //path
+//                engine.setWavPath(AiUtil.getFilesDir(
+//                        this.getApplicationContext()).getPath()
+//                        + "/record/haha.wav");
                 //开始测评
                 engine.start();
                 running = true;
@@ -174,12 +182,19 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-    private void playBack() {
+//    private void playBack() {
+//        if (engine != null) {
+//            engine.playback();
+//        }
+//        playing = true;
+//    }
+
+
+    private void playBackByTokenid(String tokenid) {
         if (engine != null) {
-            engine.playback();
+            engine.playback(tokenid);
         }
         playing = true;
-
     }
 
     private void stopPlayBack() {
@@ -198,9 +213,19 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onResult(final JSONObject result) {
             Log.w("Main--->", "-----onResult()-----" + result.toString());
+
+
+            try {
+                mCurrentTokenId = result.getString("tokenId");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+
+
                     tv.setText(result.toString());
                 }
             });
@@ -280,7 +305,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 
             case R.id.button_play:
                 if (!playing) {
-                    playBack();
+                    playBackByTokenid(mCurrentTokenId);
                     Log.e("------", "playback");
 
                 } else {

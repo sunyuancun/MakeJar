@@ -154,10 +154,6 @@ public class SingEngine {
     private long logEnable = 1;  //开启log   0为关闭;1为开启
     private long defaultServerTimeout = 60; //引擎超时时间  单位秒
 
-    private String mAudioType = "wav";
-    private long mSampleRate = 16000;
-
-
     // 用来规避 vadTimeOut多次回调 和 60011 Interface calls in the wrong order
     private boolean mNeedFeedData = true;
 
@@ -275,7 +271,7 @@ public class SingEngine {
      * 获取sdk版本号
      */
     public String getVersion() {
-        return "1.5.0";
+        return "1.5.1";
     }
 
 //-----------------初始化---------------------------------------------------------------------------------
@@ -344,8 +340,8 @@ public class SingEngine {
             request.put("attachAudioUrl", 1);
         }
 
-        audio.put("audioType", mAudioType)
-                .put("sampleRate", mSampleRate)
+        audio.put("audioType", "wav")
+                .put("sampleRate", 16000)
                 .put("sampleBytes", 2)
                 .put("channel", 1);
 
@@ -380,19 +376,29 @@ public class SingEngine {
             selectServerTypeWhenAuto();
             log("StartCfg" + startCfg.toString());
 
-            if (this.wavPath.contains(".pcm") || this.wavPath.contains(".wav")) {
+            byte[] rid = new byte[64];
+            r = SingEngine.this.SSoundStart(rid);
+
+            if (r != 0) {
+                return;
+            }
+
+            if (!wavPath.endsWith("/")) {
+                wavPath += "/";
+            }
+
+            if (this.wavPath.contains(".wav")) {
                 recordPath = this.wavPath;
             } else {
-                recordPath = this.getRecordFilePath((String.valueOf(System.currentTimeMillis())).trim());
+                recordPath = this.getRecordFilePath(new String(rid).trim());
             }
+
             mLastRecordPath = recordPath;
 
             r = mStreamAudioRecorder.start(recordPath, new StreamAudioRecorder.AudioStartCompeletedCallback() {
                 @Override
                 public void onAudioStartCompeleted() {
                     mStartRecordTimeStamp = System.currentTimeMillis();
-                    byte[] rid = new byte[64];
-                    SingEngine.this.SSoundStart(rid);
                 }
             }, new StreamAudioRecorder.AudioDataCallback() {
                 @Override
@@ -498,28 +504,44 @@ public class SingEngine {
     }
 
     /**
-     * 根据文件path回放录音
+     * 根据文件tokenId回放录音
      */
-    public void playback(String recordPath) {
-        mStreamAudioPlayer.play(recordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
-            @Override
-            public void onAudioPlayCompeleted() {
-                caller.onPlayCompeleted();
+    public void playback(String tokenId) {
+
+        try {
+            if (tokenId != null && !TextUtils.isEmpty(tokenId)) {
+                if (!wavPath.endsWith("/")) {
+                    wavPath += "/";
+                }
+                String recordPath = wavPath + tokenId + ".wav";
+                log(recordPath);
+                mStreamAudioPlayer.play(recordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
+                    @Override
+                    public void onAudioPlayCompeleted() {
+                        caller.onPlayCompeleted();
+                    }
+                });
             }
-        });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * 回放最近文件（用户传的是完整路径）
      */
     public void playback() {
-        if (mLastRecordPath != null && (mLastRecordPath.contains(".pcm") || mLastRecordPath.contains(".wav"))) {
-            mStreamAudioPlayer.play(mLastRecordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
-                @Override
-                public void onAudioPlayCompeleted() {
-                    caller.onPlayCompeleted();
-                }
-            });
+        try {
+            if (mLastRecordPath != null && mLastRecordPath.contains(".wav")) {
+                mStreamAudioPlayer.play(mLastRecordPath, new StreamAudioPlayer.AudioPlayCompeletedCallback() {
+                    @Override
+                    public void onAudioPlayCompeleted() {
+                        caller.onPlayCompeleted();
+                    }
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -741,9 +763,8 @@ public class SingEngine {
      */
     @NonNull
     private String getRecordFilePath(String filename) {
-        return wavPath + filename + ".pcm";
+        return wavPath + filename + ".wav";
     }
-
 
 //    /**
 //     * 离线WAV 文件评测
@@ -776,60 +797,60 @@ public class SingEngine {
     /**
      * 离线WAV 文件评测
      */
-    public void startWithPCM(String filePath) {
-        try {
-            if (selectAudioTypeConfig(filePath)) return;
+//    public void startWithPCM(String filePath) {
+//        try {
+//            if (selectAudioTypeConfig(filePath)) return;
+//
+//            byte[] rid = new byte[64];
+//            if (SSoundStart(rid) != 0) return;
+//            int bytes, rv;
+//            byte[] buf = new byte[1024];
+//
+//            InputStream fis;
+//            try {
+//                fis = new FileInputStream(filePath);
+//                while ((bytes = fis.read(buf, 0, 1024)) > 0) {
+//                    if ((rv = SSound.ssound_feed(engine, buf, bytes)) != 0) {
+//                        break;
+//                    }
+//                }
+//
+//                fis.close();
+//            } catch (IOException e) {
+//                caller.onEnd(70011, "feed audio data fail");
+//            } finally {
+//            }
+//
+//            stop();
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
 
-            byte[] rid = new byte[64];
-            if (SSoundStart(rid) != 0) return;
-            int bytes, rv;
-            byte[] buf = new byte[1024];
-
-            InputStream fis;
-            try {
-                fis = new FileInputStream(filePath);
-                while ((bytes = fis.read(buf, 0, 1024)) > 0) {
-                    if ((rv = SSound.ssound_feed(engine, buf, bytes)) != 0) {
-                        break;
-                    }
-                }
-
-                fis.close();
-            } catch (IOException e) {
-                caller.onEnd(70011, "feed audio data fail");
-            } finally {
-            }
-
-            stop();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    private boolean selectAudioTypeConfig(String filePath) throws JSONException {
-        if (TextUtils.isEmpty(filePath)) return true;
-
-
-        if (filePath.endsWith("WAV") || filePath.endsWith("wav")) {
-            mAudioType = "wav";
-            mSampleRate = 16000;
-        }
-
-        if (filePath.endsWith("MP3") || filePath.endsWith("mp3")) {
-            mAudioType = "mp3";
-            mSampleRate = 44100;
-        }
-
-        JSONObject audio = new JSONObject();
-        audio.put("audioType", mAudioType)
-                .put("sampleRate", mSampleRate)
-                .put("sampleBytes", 2)
-                .put("channel", 1);
-        startCfg.put("audio", audio);
-        return false;
-    }
+//    private boolean selectAudioTypeConfig(String filePath) throws JSONException {
+//        if (TextUtils.isEmpty(filePath)) return true;
+//
+//
+//        if (filePath.endsWith("WAV") || filePath.endsWith("wav")) {
+//            mAudioType = "wav";
+//            mSampleRate = 16000;
+//        }
+//
+//        if (filePath.endsWith("MP3") || filePath.endsWith("mp3")) {
+//            mAudioType = "mp3";
+//            mSampleRate = 44100;
+//        }
+//
+//        JSONObject audio = new JSONObject();
+//        audio.put("audioType", mAudioType)
+//                .put("sampleRate", mSampleRate)
+//                .put("sampleBytes", 2)
+//                .put("channel", 1);
+//        startCfg.put("audio", audio);
+//        return false;
+//    }
 
 
 //    /**
@@ -855,9 +876,8 @@ public class SingEngine {
 //        stop();
 //
 //    }
-
     private void log(String s) {
-        Log.d("SingEngine", s);
+        Log.e("SingEngine", s);
     }
 
 }
