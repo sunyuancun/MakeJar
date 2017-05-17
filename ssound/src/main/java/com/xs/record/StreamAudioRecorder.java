@@ -74,7 +74,7 @@ public final class StreamAudioRecorder {
      */
     public interface AudioDataCallback {
         @WorkerThread
-        void onAudioData(byte[] data, int size);
+        void onAudioData(byte[] data, int size,AtomicBoolean atomicBoolean);
 
         void onError();
     }
@@ -163,7 +163,7 @@ public final class StreamAudioRecorder {
                             ret = mAudioRecord.read(mByteBuffer, 0, mByteBufferSize);
                             if (ret > 0) {
                                 Log.w(TAG, "Recording ....");
-                                mAudioDataCallback.onAudioData(mByteBuffer, ret);
+                                mAudioDataCallback.onAudioData(mByteBuffer, ret,mIsRecording);
 
                                 if (file != null) {
                                     StreamAudioRecorder.this.fwrite(file, mByteBuffer, 0, ret);

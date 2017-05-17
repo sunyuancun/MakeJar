@@ -18,6 +18,7 @@ import org.json.JSONObject;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by wang on 2016/11/29.
@@ -368,6 +369,11 @@ public class SingEngine {
     public void start() {
         try {
 
+            if (mStreamAudioRecorder == null) {
+                mStreamAudioRecorder = StreamAudioRecorder.getInstance();
+            }
+
+
             int r;
             String recordPath;
             mNeedFeedData = true;
@@ -402,10 +408,19 @@ public class SingEngine {
                 }
             }, new StreamAudioRecorder.AudioDataCallback() {
                 @Override
-                public void onAudioData(byte[] data, int size) {
+                public void onAudioData(byte[] data, int size, AtomicBoolean atomicBoolean) {
                     // 处理cancel 或 stop 后多feed一次，导致60011
                     if (!mNeedFeedData) return;
                     if (size <= 0) return;
+
+                    if (mStreamAudioRecorder == null) {
+                        if (atomicBoolean != null) {
+                            atomicBoolean.compareAndSet(true, false);
+                        }
+                        SSound.ssound_stop(engine);
+                        log("-----stop--record-");
+                        return;
+                    }
 
                     if (mResultTag != null && mResultTag.equals(coreProvideType.CLOUD.getValue())) {
                         String coreTypeString = startCfg.optJSONObject("request").optString("coreType");
@@ -441,6 +456,7 @@ public class SingEngine {
                     }
                 }
 
+
                 @Override
                 public void onError() {
                     stop();
@@ -463,35 +479,43 @@ public class SingEngine {
      * 结束测评
      */
     public void stop() {
-        int r;
-        r = mStreamAudioRecorder.stop();
-        if (r != 0) {
-            caller.onEnd(70005, "StreamAudioRecorder stop error");
-        }
+        try {
+            int r;
+            r = mStreamAudioRecorder.stop();
+            if (r != 0) {
+                caller.onEnd(70005, "StreamAudioRecorder stop error");
+            }
 
-        r = SSound.ssound_stop(engine);
-        if (r != 0) {
-            caller.onEnd(70002, "engine stop error");
+            r = SSound.ssound_stop(engine);
+            if (r != 0) {
+                caller.onEnd(70002, "engine stop error");
+            }
+            mNeedFeedData = false;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        mNeedFeedData = false;
     }
 
     /**
      * 取消评测
      */
     public void cancel() {
-        int r;
-        r = mStreamAudioRecorder.stop();
-        if (r != 0) {
-            caller.onEnd(70005, "StreamAudioRecorder stop error");
-        }
+        try {
+            int r;
+            r = mStreamAudioRecorder.stop();
+            if (r != 0) {
+                caller.onEnd(70005, "StreamAudioRecorder stop error");
+            }
 
-        r = SSound.ssound_cancel(engine);
+            r = SSound.ssound_cancel(engine);
 
-        if (r != 0) {
-            caller.onEnd(70003, "cancel error");
+            if (r != 0) {
+                caller.onEnd(70003, "cancel error");
+            }
+            mNeedFeedData = false;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        mNeedFeedData = false;
     }
 
     /**

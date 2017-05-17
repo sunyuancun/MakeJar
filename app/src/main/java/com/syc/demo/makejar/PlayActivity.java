@@ -167,6 +167,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 
 
     private void stop() {
+        running = false;
         bt.setText("开始录音");
         if (engine != null) {
             engine.stop();
@@ -262,7 +263,13 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onRecordLengthOut() {
             Log.e("--onRecordLengthOut----", "录音超时");
-            stop();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    stop();
+                }
+            });
+
         }
 
         @Override
