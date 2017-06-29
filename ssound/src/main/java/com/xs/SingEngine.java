@@ -663,6 +663,11 @@ public class SingEngine {
 
 //------BUILD-----------JSON--------------------------------
 
+    /**
+     * 配置初始化参数Json
+     *
+     * @throws JSONException
+     */
     private void buildEngineJson() throws JSONException {
 
         if (cpt == coreProvideType.AUTO) {
@@ -682,10 +687,20 @@ public class SingEngine {
 
     }
 
+    /**
+     * 配置离线评测初始化参数Json
+     *
+     * @throws JSONException
+     */
     private void addNativeInitJson() throws JSONException {
         newCfg.put("native", buildNativePath());
     }
 
+    /**
+     * 配置在线评测初始化参数Json
+     *
+     * @throws JSONException
+     */
     private void addCloudInitJson() throws JSONException {
         JSONObject cloud = new JSONObject();
         String serverAPI = "ws://api.cloud.ssapi.cn:8080";
@@ -697,6 +712,11 @@ public class SingEngine {
         newCfg.put("cloud", cloud);
     }
 
+    /**
+     * 配置离线资源路径参数
+     * @return
+     * @throws JSONException
+     */
     private JSONObject buildNativePath() throws JSONException {
 
         if (needCheckResource) {
@@ -710,6 +730,10 @@ public class SingEngine {
         return new JSONObject(res_path);
     }
 
+    /**
+     * 配置初始化的VAD参数
+     * @throws JSONException
+     */
     private void buildAvdInitJson() throws JSONException {
         if (useVad) {
             JSONObject vad = new JSONObject();
@@ -721,6 +745,11 @@ public class SingEngine {
         }
     }
 
+    /**
+     * 配置vad资源路径
+     * @return
+     * @throws JSONException
+     */
     private String buildAvdPath() throws JSONException {
 
         if (needCheckResource) {
@@ -734,6 +763,10 @@ public class SingEngine {
         return avdLocalPath;
     }
 
+    /**
+     * 配置开始评测时的VAD参数（仅支持单词句子）
+     * @throws JSONException
+     */
     private void buildAvdStartJson() {
         try {
             // vad仅支持单词句子
