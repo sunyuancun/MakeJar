@@ -102,12 +102,12 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                     //  设置引擎类型
                     engine.setServerType("auto");
                     //  设置是否开启VAD功能
-//                    engine.setOpenVad(false, null);
-////                    engine.setOpenVad(true, "vad.0.1.bin");
-////                    engine.setFrontVadTime(10000);
-////                    engine.setBackVadTime(200000);
+                    engine.setOpenVad(false, null);
+                    engine.setOpenVad(true, "vad_add.bin");
+                    engine.setFrontVadTime(10000);
+                    engine.setBackVadTime(2000);
 //                    //设置离线资源
-                    engine.setNativeZip("resources.0.6.zip");
+                    engine.setNativeZip("resources1.0.zip");
 //                    engine.setLogPath(Environment.getExternalStorageDirectory() + "/aaa");
                     //   构建引擎初始化参数
                     JSONObject cfg_init = engine.buildInitJson("1459219202000002", "3bc23f814868ebd5b61a71acde532abb");
@@ -152,10 +152,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                 JSONObject startCfg = engine.buildStartJson("guest", request);
                 //设置评测请求参数
                 engine.setStartCfg(startCfg);
-//                //path
-//                engine.setWavPath(AiUtil.getFilesDir(
-//                        this.getApplicationContext()).getPath()
-//                        + "/record/haha.wav");
                 //开始测评
                 engine.start();
                 running = true;
@@ -181,14 +177,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
             running = false;
         }
     }
-
-
-//    private void playBack() {
-//        if (engine != null) {
-//            engine.playback();
-//        }
-//        playing = true;
-//    }
 
 
     private void playBackByTokenid(String tokenid) {
@@ -225,8 +213,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-
-
                     tv.setText(result.toString());
                 }
             });
@@ -234,7 +220,7 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void onEnd(int Code, String msg) {
-            Log.w("Main--->", "-----onEnd()-----" + Code);
+            Log.w("Main--->", "-----onEnd()-----" + Code+"------"+msg);
         }
 
         @Override

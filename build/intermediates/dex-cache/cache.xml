@@ -1,12 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<items version="2" >
-
-    <item
-        jar="/Users/yuancunsun/AndroidStudioProjects/Git/sdk/MakeJar/app/build/intermediates/exploded-aar/MakeJar/ssound/unspecified/jars/classes.jar"
-        jumboMode="false"
-        revision="24.0.2"
-        sha1="3a55e381a366199544e59de055a415c57e191f67">
-        <dex dex="/Users/yuancunsun/AndroidStudioProjects/Git/sdk/MakeJar/app/build/intermediates/pre-dexed/debug/MakeJar-ssound-unspecified_9c8a5ae1f49b17eaef227a7406bc5d185599d25f.jar" />
-    </item>
-
-</items>
+<items version="2" />
