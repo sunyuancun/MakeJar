@@ -3,12 +3,14 @@ package com.syc.demo.makejar;
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.SpannableStringBuilder;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -17,11 +19,17 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.syc.demo.makejar.multiactiontextview.InputObject;
+import com.syc.demo.makejar.multiactiontextview.MultiActionTextView;
+import com.syc.demo.makejar.multiactiontextview.SentenceDetail;
 import com.xs.SingEngine;
 import com.xs.utils.AiUtil;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 public class PlayActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -131,7 +139,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         bt.setText("停止录音");
         String retext = edit.getText().toString().trim();
 
-
         engine.setWavPath(AiUtil.getFilesDir(
                 this).getPath()
                 + "/record2");
@@ -139,12 +146,8 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         if (engine != null) {
             try {
                 JSONObject request = new JSONObject();
-
-                if (retext.contains(" ")) {
-                    request.put("coreType", "en.sent.score");
-                } else {
-                    request.put("coreType", "en.word.score");
-                }
+                request.put("coreType", "en.sent.score");
+                request.put("symbol", 1);
                 request.put("attachAudioUrl", 1);
                 request.put("refText", retext);
                 request.put("rank", 100);
@@ -213,14 +216,64 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    tv.setText(result.toString());
+                    resultCovertToList(result);
                 }
             });
         }
 
+        private void resultCovertToList(JSONObject result) {
+            try {
+                ArrayList<SentenceDetail> sentenceDetailList = new ArrayList<>();
+                JSONArray details = result.getJSONObject("result").getJSONArray("details");
+
+                for (int i = 0; i < details.length(); i++) {
+                    JSONObject detail = (JSONObject) details.get(i);
+                    SentenceDetail sentenceDetail = new SentenceDetail();
+                    sentenceDetail.setCharX(detail.getString("char"));
+                    sentenceDetail.setScore(detail.getDouble("score"));
+                    sentenceDetailList.add(i, sentenceDetail);
+                }
+                showResultTextView(tv, sentenceDetailList);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Log.e("---SentenceDetail---", "error    json  parson  error");
+            }
+        }
+
+        private void showResultTextView(TextView tv_result, ArrayList<SentenceDetail> list) {
+            int startSpan;
+            int endSpan;
+            String strText = "";
+            double s_sore;
+            SpannableStringBuilder stringBuilder = new SpannableStringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                startSpan = strText.length();
+                strText = strText + list.get(i).getCharX() + " ";
+                s_sore = list.get(i).getScore();
+                endSpan = strText.length();
+                stringBuilder.append(list.get(i).getCharX() + " ");
+
+                InputObject nameClick = new InputObject();
+                nameClick.setStartSpan(startSpan);
+                nameClick.setEndSpan(endSpan);
+                nameClick.setStringBuilder(stringBuilder);
+
+                if (s_sore < 50)
+                    nameClick.setTextColor(PlayActivity.this.getResources().getColor(R.color.text_red));
+                else if (s_sore >= 50 && s_sore < 70)
+                    nameClick.setTextColor(PlayActivity.this.getResources().getColor(R.color.text_yellow));
+                else if (s_sore >= 70 && s_sore <= 100)
+                    nameClick.setTextColor(PlayActivity.this.getResources().getColor(R.color.text_green));
+                else
+                    nameClick.setTextColor(PlayActivity.this.getResources().getColor(R.color.text_red));
+                MultiActionTextView.addActionOnTextViewWithoutLink(nameClick);
+                MultiActionTextView.setSpannableText(tv_result, stringBuilder, Color.RED);
+            }
+        }
+
         @Override
         public void onEnd(int Code, String msg) {
-            Log.w("Main--->", "-----onEnd()-----" + Code+"------"+msg);
+            Log.w("Main--->", "-----onEnd()-----" + Code + "------" + msg);
         }
 
         @Override
@@ -231,14 +284,12 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onFrontVadTimeOut() {
             Log.e("--onFrontVadTimeOut----", "前置超时");
-
             running = false;
         }
 
         @Override
         public void onBackVadTimeOut() {
             Log.e("--onBackVadTimeOut----", "后置超时");
-
             running = false;
         }
 
@@ -255,7 +306,6 @@ public class PlayActivity extends AppCompatActivity implements View.OnClickListe
                     stop();
                 }
             });
-
         }
 
         @Override
